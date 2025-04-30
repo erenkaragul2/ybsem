@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+    <h1 class="text-3xl font-semibold text-gray-800 mb-8 text-center">Müşteri Düzenle (ID: {{ customer['id'] }})</h1>
+
+    <form action="{{ url_for('edit_customer', customer_id=customer['id']) }}" method="POST" class="space-y-6">
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Adı Soyadı *</label>
+            <input type="text" id="name" name="name" value="{{ customer['name'] | default('', true) }}" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon Numarası</label>
+                <input type="tel" id="phone" name="phone" value="{{ customer['phone'] | default('', true) }}" placeholder="Örn: 555 123 4567" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                 <p class="text-xs text-gray-500 mt-1">Bu numara sistemde benzersiz olmalıdır.</p>
+            </div>
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-posta Adresi</label>
+                <input type="email" id="email" name="email" value="{{ customer['email'] | default('', true) }}" placeholder="Örn: isim@ornek.com" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                 <p class="text-xs text-gray-500 mt-1">Bu e-posta sistemde benzersiz olmalıdır.</p>
+            </div>
+        </div>
+        <div>
+            <label for="customer_type" class="block text-sm font-medium text-gray-700 mb-1">Müşteri Tipi *</label>
+            <select id="customer_type" name="customer_type" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white" required>
+                <option value="" {% if not customer['customer_type'] %}selected{% endif %}>Seçiniz...</option>
+                <option value="Alıcı" {% if customer['customer_type'] == 'Alıcı' %}selected{% endif %}>Alıcı</option>
+                <option value="Satıcı" {% if customer['customer_type'] == 'Satıcı' %}selected{% endif %}>Satıcı</option>
+                <option value="Kiracı" {% if customer['customer_type'] == 'Kiracı' %}selected{% endif %}>Kiracı</option>
+                <option value="Potansiyel" {% if customer['customer_type'] == 'Potansiyel' %}selected{% endif %}>Potansiyel</option>
+                <option value="Diğer" {% if customer['customer_type'] == 'Diğer' %}selected{% endif %}>Diğer</option>
+            </select>
+        </div>
+        <div>
+            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notlar</label>
+            <textarea id="notes" name="notes" rows="5" placeholder="Müşteri ile ilgili önemli notlar, tercihler, aradığı/sattığı mülk kriterleri vb." class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ customer['notes'] | default('', true) }}</textarea>
+        </div>
+        <div class="pt-4 flex justify-end space-x-3">
+             <a href="{{ url_for('list_customers') if not customer['is_archived'] else url_for('list_archived_customers') }}" class="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                İptal
+            </a>
+            <button type="submit" class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition duration-150 ease-in-out">
+                Güncelle
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

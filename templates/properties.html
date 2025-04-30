@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md mb-8">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-5">Emlak Filtrele</h2>
+    <form method="GET" action="{{ url_for('list_properties') }}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-5">
+            <div>
+                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+                <select id="city" name="city" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="">Tümü</option>
+                    {% for city in distinct_citys %}
+                    <option value="{{ city }}" {% if filters.city == city %}selected{% endif %}>{{ city }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="district" class="block text-sm font-medium text-gray-700 mb-1">İlçe</label>
+                 <select id="district" name="district" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="">Tümü</option>
+                    {% for district in distinct_districts %}
+                    <option value="{{ district }}" {% if filters.district == district %}selected{% endif %}>{{ district }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="property_type" class="block text-sm font-medium text-gray-700 mb-1">Emlak Tipi</label>
+                <select id="property_type" name="property_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="">Tümü</option>
+                     {% for p_type in distinct_property_types %}
+                    <option value="{{ p_type }}" {% if filters.property_type == p_type %}selected{% endif %}>{{ p_type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+                <select id="status" name="status" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="">Tümü</option>
+                    {% for stat in distinct_statuses %}
+                    <option value="{{ stat }}" {% if filters.status == stat %}selected{% endif %}>{{ stat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+             <div>
+                <label for="rooms" class="block text-sm font-medium text-gray-700 mb-1">Oda Sayısı</label>
+                <select id="rooms" name="rooms" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                    <option value="">Tümü</option>
+                    {% for room_count in distinct_rooms %}
+                    <option value="{{ room_count }}" {% if filters.rooms == room_count %}selected{% endif %}>{{ room_count }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="min_price" class="block text-sm font-medium text-gray-700 mb-1">Min Fiyat (TL)</label>
+                <input type="number" name="min_price" id="min_price" value="{{ filters.min_price if filters.min_price is not none else '' }}" placeholder="Min Fiyat" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+            </div>
+            <div>
+                <label for="max_price" class="block text-sm font-medium text-gray-700 mb-1">Max Fiyat (TL)</label>
+                <input type="number" name="max_price" id="max_price" value="{{ filters.max_price if filters.max_price is not none else '' }}" placeholder="Max Fiyat" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+            </div>
+        </div>
+        <div class="flex justify-end space-x-3">
+             <a href="{{ url_for('list_properties') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Filtreyi Temizle
+            </a>
+            <button type="submit" class="inline-flex items-center px-6 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Filtrele
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5">
+        <h1 class="text-2xl font-bold text-gray-800 mb-3 sm:mb-0">Emlak Listesi</h1>
+        <a href="{{ url_for('add_property') }}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200">
+            + Yeni Emlak Ekle
+        </a>
+    </div>
+
+    {% if properties %}
+    <div class="overflow-x-auto shadow border-b border-gray-200 rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Başlık</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tip</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fiyat (TL)</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Konum</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oda Sayısı</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sahip</th> <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for prop in properties %}
+                <tr class="hover:bg-gray-50 transition duration-150 ease-in-out">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ prop['id'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ prop['title'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ prop['property_type'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if prop['status'] == 'Satılık' %} bg-blue-100 text-blue-800
+                            {% elif prop['status'] == 'Kiralık' %} bg-yellow-100 text-yellow-800
+                            {% elif prop['status'] == 'Satıldı' %} bg-red-100 text-red-800
+                            {% elif prop['status'] == 'Kiralandı' %} bg-purple-100 text-purple-800
+                            {% else %} bg-gray-100 text-gray-800 {% endif %}">
+                            {{ prop['status'] }}
+                        </span>
+                    </td>
+                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {% if prop['price'] %}
+                            {{ "{:,.0f}".format(prop['price']).replace(',', '.') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ prop['city'] }} / {{ prop['district'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ prop['rooms'] | default('-', true) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ prop['owner_name'] | default('-', true) }}</td> <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <a href="#" class="btn-sm btn-detail">Detay</a>
+                        <a href="{{ url_for('edit_property', property_id=prop['id']) }}" class="btn-sm btn-edit">Düzenle</a>
+                        <form action="{{ url_for('delete_property', property_id=prop['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Bu emlağı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');">
+                            <button type="submit" class="btn-sm btn-delete">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+     <div class="text-center py-12 px-6 bg-gray-50 rounded-lg">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <h3 class="mt-2 text-lg font-semibold text-gray-800">Sonuç Bulunamadı</h3>
+        <p class="mt-1 text-sm text-gray-500">Filtre kriterlerinize uygun emlak bulunamadı. Farklı kriterler deneyin veya filtreyi temizleyin.</p>
+        <div class="mt-6">
+          <a href="{{ url_for('list_properties') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Filtreyi Temizle
+          </a>
+        </div>
+      </div>
+    {% endif %}
+</div>
+{% endblock %}

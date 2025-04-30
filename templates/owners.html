@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5">
+        <h1 class="text-2xl font-bold text-gray-800 mb-3 sm:mb-0">{{ page_title }}</h1>
+        <a href="{{ url_for('add_owner') }}" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200">
+            + Yeni Sahip Ekle
+        </a>
+    </div>
+
+    {% if owners %}
+    <div class="overflow-x-auto shadow border-b border-gray-200 rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adı Soyadı</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefon</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-posta</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for owner in owners %}
+                <tr class="hover:bg-gray-50 transition duration-150 ease-in-out">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ owner['id'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ owner['name'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ owner['phone'] | default('-', true) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ owner['email'] | default('-', true) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <a href="{{ url_for('edit_owner', owner_id=owner['id']) }}" class="btn-sm btn-edit">Düzenle</a>
+                         <form action="{{ url_for('delete_owner', owner_id=owner['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Bu emlak sahibini silmek istediğinizden emin misiniz? Bu sahibe ait emlakların sahibi \'Belirsiz\' olarak ayarlanacaktır.');">
+                             <button type="submit" class="btn-sm btn-delete">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+     <div class="text-center py-12 px-6 bg-gray-50 rounded-lg">
+        <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+        <h3 class="mt-2 text-lg font-semibold text-gray-800">Emlak Sahibi Yok</h3>
+        <p class="mt-1 text-sm text-gray-500">Sistemde kayıtlı emlak sahibi bulunmamaktadır.</p>
+        <div class="mt-6">
+          <a href="{{ url_for('add_owner') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+            Yeni Sahip Ekle
+          </a>
+        </div>
+      </div>
+    {% endif %}
+</div>
+{% endblock %}

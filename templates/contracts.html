@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5">
+        <h1 class="text-2xl font-bold text-gray-800 mb-3 sm:mb-0">{{ page_title }}</h1>
+        <a href="{{ url_for('create_contract') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200">
+            + Yeni Sözleşme Oluştur
+        </a>
+    </div>
+
+    {% if contracts %}
+    <div class="overflow-x-auto shadow border-b border-gray-200 rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tip</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emlak</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sahip/Kiraya Veren</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sorumlu Personel</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Söz. Tarihi</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Başlangıç</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bitiş</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Bedel (TL)</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for contract in contracts %}
+                <tr class="hover:bg-gray-50 transition duration-150 ease-in-out">
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ contract['id'] }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if contract['contract_type'] == 'Satış' %} bg-red-100 text-red-800
+                            {% elif contract['contract_type'] == 'Kira' %} bg-yellow-100 text-yellow-800
+                            {% else %} bg-gray-100 text-gray-800 {% endif %}">
+                            {{ contract['contract_type'] }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <a href="{{ url_for('edit_property', property_id=contract['property_id']) }}" title="{{ contract['property_title'] }}" class="text-blue-600 hover:text-blue-800 hover:underline">
+                            {{ contract['property_title'][:30] }}{% if contract['property_title']|length > 30 %}...{% endif %} (ID:{{ contract['property_id'] }})
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <a href="{{ url_for('edit_customer', customer_id=contract['customer_id']) }}" title="{{ contract['customer_name'] }}" class="text-teal-600 hover:text-teal-800 hover:underline">
+                            {{ contract['customer_name'] }} (ID:{{ contract['customer_id'] }})
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if contract['owner_id'] %}
+                        <a href="{{ url_for('edit_owner', owner_id=contract['owner_id']) }}" title="{{ contract['owner_name'] }}" class="text-purple-600 hover:text-purple-800 hover:underline">
+                            {{ contract['owner_name'] }} (ID:{{ contract['owner_id'] }})
+                        </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                         {% if contract['personnel_id'] %}
+                        <a href="{{ url_for('edit_personnel', personnel_id=contract['personnel_id']) }}" title="{{ contract['personnel_name'] }}" class="text-cyan-600 hover:text-cyan-800 hover:underline">
+                            {{ contract['personnel_name'] }} (ID:{{ contract['personnel_id'] }})
+                        </a>
+                        {% else %}
+                            <span class="text-red-600 italic">Silinmiş Personel</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contract['contract_date'] | dateformat }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contract['start_date'] | dateformat | default('-', true) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ contract['end_date'] | dateformat | default('-', true) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">{{ contract['price'] | currencyformat }}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium space-x-1">
+                        {# PDF İndirme Butonu - Sadece pdf_filename varsa gösterilir #}
+                        {% if contract['pdf_filename'] %}
+                        <a href="{{ url_for('download_contract_pdf', contract_id=contract['id']) }}" class="btn-sm btn-download" title="PDF Sözleşmesini İndir">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a.5.5 0 00-1 0v3.586l-1.293-1.293a.5.5 0 10-.707.707l2 2a.5.5 0 00.707 0l2-2a.5.5 0 00-.707-.707L11 11.586V8z" clip-rule="evenodd" />
+                            </svg>
+                            PDF
+                        </a>
+                        {% endif %}
+                        {# Silme Butonu #}
+                        <form action="{{ url_for('delete_contract', contract_id=contract['id']) }}" method="POST" class="inline-block" onsubmit="return confirm('Bu sözleşmeyi kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');">
+                            <button type="submit" class="btn-sm btn-delete" title="Sözleşmeyi Sil">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+     <div class="text-center py-12 px-6 bg-gray-50 rounded-lg">
+        <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <h3 class="mt-2 text-lg font-semibold text-gray-800">Sözleşme Bulunamadı</h3>
+        <p class="mt-1 text-sm text-gray-500">Sistemde kayıtlı sözleşme bulunmamaktadır.</p>
+        <div class="mt-6">
+          <a href="{{ url_for('create_contract') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Yeni Sözleşme Oluştur
+          </a>
+        </div>
+      </div>
+    {% endif %}
+</div>
+{% endblock %}

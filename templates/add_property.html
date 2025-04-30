@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-lg max-w-3xl mx-auto">
+    <h1 class="text-3xl font-semibold text-gray-800 mb-8 text-center">Yeni Emlak Kaydı</h1>
+
+    <form action="{{ url_for('add_property') }}" method="POST" class="space-y-6">
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">İlan Başlığı *</label>
+            <input type="text" id="title" name="title" value="{{ form_data.title if form_data else '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+        </div>
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
+            <textarea id="description" name="description" rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ form_data.description if form_data else '' }}</textarea>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="property_type" class="block text-sm font-medium text-gray-700 mb-1">Emlak Tipi *</label>
+                <select id="property_type" name="property_type" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white" required>
+                    <option value="" {% if not form_data or not form_data.property_type %}selected{% endif %}>Seçiniz...</option>
+                    <option value="Daire" {% if form_data and form_data.property_type == 'Daire' %}selected{% endif %}>Daire</option>
+                    <option value="Villa" {% if form_data and form_data.property_type == 'Villa' %}selected{% endif %}>Villa</option>
+                    <option value="Müstakil Ev" {% if form_data and form_data.property_type == 'Müstakil Ev' %}selected{% endif %}>Müstakil Ev</option>
+                    <option value="Rezidans" {% if form_data and form_data.property_type == 'Rezidans' %}selected{% endif %}>Rezidans</option>
+                    <option value="Yazlık" {% if form_data and form_data.property_type == 'Yazlık' %}selected{% endif %}>Yazlık</option>
+                    <option value="Arsa" {% if form_data and form_data.property_type == 'Arsa' %}selected{% endif %}>Arsa</option>
+                    <option value="İş Yeri" {% if form_data and form_data.property_type == 'İş Yeri' %}selected{% endif %}>İş Yeri</option>
+                    <option value="Diğer" {% if form_data and form_data.property_type == 'Diğer' %}selected{% endif %}>Diğer</option>
+                </select>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Durum *</label>
+                <select id="status" name="status" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white" required>
+                    <option value="Satılık" {% if not form_data or form_data.status == 'Satılık' %}selected{% endif %}>Satılık</option>
+                    <option value="Kiralık" {% if form_data and form_data.status == 'Kiralık' %}selected{% endif %}>Kiralık</option>
+                </select>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Fiyat (TL)</label>
+                <input type="number" id="price" name="price" step="0.01" value="{{ form_data.price if form_data else '' }}" placeholder="Örn: 1500000" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="area" class="block text-sm font-medium text-gray-700 mb-1">Alan (m²)</label>
+                <input type="number" id="area" name="area" step="0.1" value="{{ form_data.area if form_data else '' }}" placeholder="Örn: 120" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="rooms" class="block text-sm font-medium text-gray-700 mb-1">Oda Sayısı</label>
+                <input type="text" id="rooms" name="rooms" value="{{ form_data.rooms if form_data else '' }}" placeholder="Örn: 3+1" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+        </div>
+         <div>
+            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Adres</label>
+            <input type="text" id="address" name="address" value="{{ form_data.address if form_data else '' }}" placeholder="Mahalle, Sokak, No..." class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Şehir *</label>
+                <input type="text" id="city" name="city" value="{{ form_data.city if form_data else '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+            </div>
+            <div>
+                <label for="district" class="block text-sm font-medium text-gray-700 mb-1">İlçe *</label>
+                <input type="text" id="district" name="district" value="{{ form_data.district if form_data else '' }}" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+            </div>
+        </div>
+        <div>
+            <label for="owner_id" class="block text-sm font-medium text-gray-700 mb-1">Emlak Sahibi</label>
+            <select id="owner_id" name="owner_id" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                <option value="">Sahip Seçiniz (Opsiyonel)...</option>
+                {% for owner in owners %}
+                <option value="{{ owner['id'] }}" {% if form_data and form_data.owner_id == owner['id']|string %}selected{% endif %}>{{ owner['name'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pt-4 text-right">
+            <button type="submit" class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                Emlak Kaydet
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

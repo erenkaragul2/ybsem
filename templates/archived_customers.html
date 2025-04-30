@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">{{ page_title }}</h1> <a href="{{ url_for('list_customers') }}" class="text-blue-600 hover:text-blue-800">
+            &larr; Aktif Müşterilere Dön
+        </a>
+    </div>
+
+    {% if customers %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-300">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left">ID</th>
+                    <th class="py-2 px-4 border-b text-left">Adı Soyadı</th>
+                    <th class="py-2 px-4 border-b text-left">Telefon</th>
+                    <th class="py-2 px-4 border-b text-left">E-posta</th>
+                    <th class="py-2 px-4 border-b text-left">Müşteri Tipi</th>
+                    <th class="py-2 px-4 border-b text-left">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr class="hover:bg-gray-50">
+                    <td class="py-2 px-4 border-b">{{ customer['id'] }}</td>
+                    <td class="py-2 px-4 border-b">{{ customer['name'] }}</td>
+                    <td class="py-2 px-4 border-b">{{ customer['phone'] | default('-', true) }}</td>
+                    <td class="py-2 px-4 border-b">{{ customer['email'] | default('-', true) }}</td>
+                    <td class="py-2 px-4 border-b">{{ customer['customer_type'] | default('-', true) }}</td>
+                    <td class="py-2 px-4 border-b whitespace-nowrap">
+                        <button type="button"
+                                class="detail-button text-blue-500 hover:text-blue-700 text-sm mr-2"
+                                data-id="{{ customer['id'] }}"
+                                data-name="{{ customer['name'] }}"
+                                data-phone="{{ customer['phone'] | default('-', true) }}"
+                                data-email="{{ customer['email'] | default('-', true) }}"
+                                data-type="{{ customer['customer_type'] | default('-', true) }}"
+                                data-notes="{{ customer['notes'] | default('', true) }}"
+                                data-registered="{{ customer['date_registered'] | datetimeformat }}">
+                            Detay
+                        </button>
+                        <form action="{{ url_for('unarchive_customer', customer_id=customer['id']) }}" method="POST" class="inline-block mr-2" onsubmit="return confirm('Bu müşteriyi arşivden çıkarmak istediğinizden emin misiniz?');">
+                            <button type="submit" class="btn-sm btn-unarchive">
+                                Arşivden Çıkar
+                            </button>
+                        </form>
+                         <a href="#" class="text-red-500 hover:text-red-700 text-sm">Sil</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+     <div class="text-center py-10">
+        <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Arşiv Boş</h3>
+        <p class="mt-1 text-sm text-gray-500">Arşivlenmiş müşteri bulunmamaktadır.</p>
+     </div>
+    {% endif %}
+</div>
+
+<div id="customerDetailModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">Müşteri Detayları</h2>
+            <button id="closeModalButton" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+        </div>
+        <div class="space-y-3">
+            <p><strong>ID:</strong> <span id="modalCustomerId">-</span></p>
+            <p><strong>Adı Soyadı:</strong> <span id="modalCustomerName">-</span></p>
+            <p><strong>Telefon:</strong> <span id="modalCustomerPhone">-</span></p>
+            <p><strong>E-posta:</strong> <span id="modalCustomerEmail">-</span></p>
+            <p><strong>Müşteri Tipi:</strong> <span id="modalCustomerType">-</span></p>
+            <p><strong>Kayıt Tarihi:</strong> <span id="modalCustomerRegistered">-</span></p>
+            <div>
+                <strong>Notlar:</strong>
+                <p id="modalCustomerNotes" class="mt-1 p-2 border rounded bg-gray-50 text-sm whitespace-pre-wrap">-</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const modal = document.getElementById('customerDetailModal');
+    const closeModalButton = document.getElementById('closeModalButton');
+    const detailButtons = document.querySelectorAll('.detail-button');
+
+    const modalId = document.getElementById('modalCustomerId');
+    const modalName = document.getElementById('modalCustomerName');
+    const modalPhone = document.getElementById('modalCustomerPhone');
+    const modalEmail = document.getElementById('modalCustomerEmail');
+    const modalType = document.getElementById('modalCustomerType');
+    const modalRegistered = document.getElementById('modalCustomerRegistered');
+    const modalNotes = document.getElementById('modalCustomerNotes');
+
+    function openModal(customerData) {
+        modalId.textContent = customerData.id || '-';
+        modalName.textContent = customerData.name || '-';
+        modalPhone.textContent = customerData.phone || '-';
+        modalEmail.textContent = customerData.email || '-';
+        modalType.textContent = customerData.type || '-';
+        modalRegistered.textContent = customerData.registered || '-';
+        modalNotes.textContent = customerData.notes || '-';
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    detailButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            const customerData = event.currentTarget.dataset;
+            openModal(customerData);
+        });
+    });
+
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', closeModal);
+    }
+
+    if (modal) {
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+    }
+</script>
+{% endblock %}

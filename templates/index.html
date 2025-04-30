@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="bg-white p-10 rounded-xl shadow-xl text-center">
+    <h1 class="text-4xl font-bold mb-6 text-indigo-700">Emlak Yönetim Bilgi Sistemine Hoş Geldiniz!</h1>
+    <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+        Portföyünüzü yönetin, müşterilerinizi takip edin ve iş süreçlerinizi kolaylaştırın.
+    </p>
+    <div class="mt-8 space-x-3 space-y-3 flex flex-wrap justify-center items-center">
+        <a href="{{ url_for('list_properties') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transform hover:scale-105 transition duration-300 ease-in-out">
+            Emlakları Görüntüle
+        </a>
+        <a href="{{ url_for('list_customers') }}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transform hover:scale-105 transition duration-300 ease-in-out">
+            Müşterileri Görüntüle
+        </a>
+         <a href="{{ url_for('list_owners') }}" class="inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transform hover:scale-105 transition duration-300 ease-in-out">
+            Sahipleri Görüntüle
+        </a>
+         <a href="{{ url_for('list_personnel') }}" class="inline-block bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transform hover:scale-105 transition duration-300 ease-in-out">
+            Personeli Görüntüle
+        </a>
+        </div>
+</div>
+
+{# --- YENİ: Örnek Veri Ekleme Butonu (Sadece Debug Modunda Görünür) --- #}
+{# Flask app.config['DEBUG'] True ise bu bölüm görünür #}
+{% if config.DEBUG %}
+<div class="mt-10 p-4 bg-yellow-100 border border-yellow-400 rounded-lg text-center max-w-2xl mx-auto shadow">
+    <h3 class="text-lg font-semibold text-yellow-900 mb-2">Geliştirici Alanı</h3>
+    <p class="text-sm text-yellow-800 mb-3">
+        Aşağıdaki buton, test amacıyla veritabanına rastgele <strong>örnek veriler</strong> (sahipler, personel, müşteriler, emlaklar) ekler.
+        Bu işlem mevcut verilerinizi <strong>silmez</strong>, üzerine ekleme yapar. Var olan telefon/e-posta varsa o kayıt atlanır.
+        Lütfen sadece test ortamında kullanın!
+    </p>
+    <form action="{{ url_for('add_dummy_data') }}" method="POST" onsubmit="return confirm('Veritabanına çok sayıda örnek veri eklenecek. Bu işlem biraz zaman alabilir ve test veritabanınızı doldurabilir. Emin misiniz?');">
+        <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-5 rounded-lg shadow-md transform hover:scale-105 transition duration-300 ease-in-out text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1 -mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+            </svg>
+            Örnek Veri Ekle
+        </button>
+    </form>
+</div>
+{% endif %}
+{# --- Örnek Veri Ekleme Butonu Sonu --- #}
+
+{% endblock %}
+

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+    <h1 class="text-3xl font-semibold text-gray-800 mb-8 text-center">Personel Düzenle (ID: {{ personnel['id'] }})</h1>
+
+    <form action="{{ url_for('edit_personnel', personnel_id=personnel['id']) }}" method="POST" class="space-y-6">
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Adı Soyadı *</label>
+            <input type="text" id="name" name="name" value="{{ personnel['name'] | default('', true) }}" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" required>
+        </div>
+
+        <div>
+            <label for="position" class="block text-sm font-medium text-gray-700 mb-1">Pozisyon</label>
+            <input type="text" id="position" name="position" value="{{ personnel['position'] | default('', true) }}" placeholder="Örn: Yönetici Asistanı, Satış Temsilcisi" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon Numarası</label>
+                <input type="tel" id="phone" name="phone" value="{{ personnel['phone'] | default('', true) }}" placeholder="Örn: 555 123 4567" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                <p class="text-xs text-gray-500 mt-1">Bu numara sistemde benzersiz olmalıdır.</p>
+            </div>
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-posta Adresi</label>
+                <input type="email" id="email" name="email" value="{{ personnel['email'] | default('', true) }}" placeholder="Örn: isim@sirket.com" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                <p class="text-xs text-gray-500 mt-1">Bu e-posta sistemde benzersiz olmalıdır.</p>
+            </div>
+        </div>
+
+        <div>
+            <label for="hire_date" class="block text-sm font-medium text-gray-700 mb-1">İşe Giriş Tarihi</label>
+            <input type="date" id="hire_date" name="hire_date" value="{{ personnel['hire_date'] | default('', true) }}" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+        </div>
+
+        <div class="flex items-center">
+            <input id="is_active" name="is_active" type="checkbox" class="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded" {% if personnel['is_active'] %}checked{% endif %}>
+            <label for="is_active" class="ml-2 block text-sm text-gray-900">
+                Personel Aktif
+            </label>
+        </div>
+
+        <div>
+            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notlar</label>
+            <textarea id="notes" name="notes" rows="4" placeholder="Personel ile ilgili ek bilgiler..." class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">{{ personnel['notes'] | default('', true) }}</textarea>
+        </div>
+
+        <div class="pt-4 flex justify-end space-x-3">
+             <a href="{{ url_for('list_personnel') }}" class="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500">
+                İptal
+            </a>
+            <button type="submit" class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition duration-150 ease-in-out">
+                Güncelle
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
