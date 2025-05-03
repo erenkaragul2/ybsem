@@ -9,6 +9,7 @@ import random
 import re # Dosya adı temizleme ve not temizleme için eklendi
 from werkzeug.utils import secure_filename # PDF indirme için dosya adı güvenliği
 
+
 # PDF Kütüphanesi (Kurulu olduğundan emin olun: pip install reportlab)
 try:
     from reportlab.lib.pagesizes import letter, A4
@@ -18,15 +19,22 @@ try:
     from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    FONT_NAME = 'Helvetica'
-    # Proje dizininde bir 'fonts' klasörü ve içinde 'Roboto-Regular.ttf' olduğunu varsayalım
-    font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'Roboto-Regular.ttf')
+    FONT_NAME = 'Helvetica' # Varsayılan font
+    CUSTOM_FONT_NAME = 'MyCustomFont' # reportlab içinde kullanılacak isim
+    CUSTOM_FONT_FILENAME = 'Roboto-Italic-VariableFont_wdth,wght.ttf' # Ana dizindeki dosya adı
+
+    # Font dosyasının tam yolunu oluştur
+    font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), CUSTOM_FONT_FILENAME)
+
     if os.path.exists(font_path):
-        pdfmetrics.registerFont(TTFont('Roboto-Regular', font_path))
-        FONT_NAME = 'Roboto-Regular'
-        print(f"'{FONT_NAME}' fontu başarıyla yüklendi.")
+        try:
+            pdfmetrics.registerFont(TTFont(CUSTOM_FONT_NAME, font_path))
+            FONT_NAME = CUSTOM_FONT_NAME # Başarılı olursa özel fontu kullan
+            print(f"'{FONT_NAME}' fontu ('{CUSTOM_FONT_FILENAME}') başarıyla yüklendi.")
+        except Exception as font_register_error:
+             print(f"Uyarı: '{CUSTOM_FONT_FILENAME}' fontu yüklenirken hata oluştu: {font_register_error}. Standart font ({FONT_NAME}) kullanılacak.")
     else:
-         print(f"Uyarı: Türkçe karakterler için '{font_path}' yoluyla özel font yüklenemedi. Standart font ({FONT_NAME}) kullanılacak. PDF'te Türkçe karakter sorunları yaşanabilir.")
+         print(f"Uyarı: Türkçe karakterler için özel font dosyası '{font_path}' bulunamadı. Standart font ({FONT_NAME}) kullanılacak. PDF'te Türkçe karakter sorunları yaşanabilir.")
 except ImportError:
     print("HATA: reportlab kütüphanesi bulunamadı. Lütfen 'pip install reportlab' ile kurun.")
     SimpleDocTemplate = None # PDF fonksiyonları kullanılamayacak
@@ -128,10 +136,10 @@ def init_db():
                 address TEXT,
                 city TEXT,
                 district TEXT,
-                agent_id INTEGER, -- Bu alan kullanılmıyor gibi, kaldırılabilir veya personel_id ile değiştirilebilir
+                -- agent_id INTEGER, -- Bu alan kaldırıldı
                 owner_id INTEGER, -- Emlak sahibine referans
                 date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE SET NULL,
+                -- FOREIGN KEY (agent_id) REFERENCES agents (id) ON DELETE SET NULL, -- Kaldırıldı
                 FOREIGN KEY (owner_id) REFERENCES owners (id) ON DELETE SET NULL -- Sahip silinirse NULL yap
             )
         ''')
@@ -815,10 +823,22 @@ def list_owners():
     cursor = db.cursor()
     owners = []
     try:
-        cursor.execute("SELECT id, name, phone, email FROM owners ORDER BY name")
+        # Join owners with properties and group by owner to get their properties
+        cursor.execute("""
+            SELECT
+                o.id,
+                o.name,
+                o.phone,
+                o.email,
+                GROUP_CONCAT(p.title, ', ') AS owned_properties
+            FROM owners o
+            LEFT JOIN properties p ON o.id = p.owner_id
+            GROUP BY o.id, o.name, o.phone, o.email
+            ORDER BY o.name
+        """)
         owners = cursor.fetchall()
     except sqlite3.Error as e:
-        flash(f"Sahipleri listelerken hata: {e}", "error")
+        flash(f"Sahipleri ve emlaklarını listelerken hata: {e}", "error")
     return render_template('owners.html', owners=owners, page_title="Emlak Sahipleri")
 
 @app.route('/add_owner', methods=['GET', 'POST'])
@@ -1094,7 +1114,7 @@ def generate_contract_pdf(data):
     # --- Taraflar ---
     story.append(Paragraph("Taraflar", heading_style))
 
-    owner = data.get('owner', {}) # Sahip bilgisi yoksa boş dict
+    owner = data.get('owner') or {} # Sahip bilgisi None ise veya yoksa boş dict kullan
     customer = data.get('customer', {}) # Müşteri bilgisi
     property_info_pdf = data.get('property', {}) # Emlak bilgisi
     personnel_info_pdf = data.get('personnel', {}) # Personel bilgisi
@@ -1395,9 +1415,9 @@ def create_contract():
         except ImportError as ie:
              flash(f"PDF oluşturma hatası: {ie}. 'reportlab' kütüphanesinin kurulu olduğundan emin olun.", "error")
              print(f"Import Hatası: {ie}")
-        except RuntimeError as re:
-             flash(f"PDF oluşturulurken hata oluştu: {re}", "error")
-             print(f"Runtime Hatası (PDF Oluşturma): {re}")
+        except RuntimeError as runtime_err:
+             flash(f"PDF oluşturulurken hata oluştu: {runtime_err}", "error")
+             print(f"Runtime Hatası (PDF Oluşturma): {runtime_err}")
         except Exception as e:
             flash(f"Beklenmedik bir hata oluştu: {e}", "error")
             print(f"Beklenmedik Hata: {e}")
@@ -1850,12 +1870,256 @@ def add_dummy_data():
     return redirect(url_for('index')) # Ana sayfaya yönlendir
 
 
+# --- Raporlama Modülü ---
+
+@app.route('/reports', methods=['GET', 'POST'])
+def reports():
+    """Rapor seçim sayfasını gösterir ve PDF rapor oluşturur."""
+    if request.method == 'POST':
+        report_type = request.form.get('report_type')
+        if not report_type:
+            flash("Lütfen bir rapor türü seçin.", "warning")
+            return redirect(url_for('reports'))
+
+        try:
+            pdf_buffer, filename = generate_module_report_pdf(report_type)
+            response = make_response(pdf_buffer.getvalue())
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+            return response
+        except Exception as e:
+            print(f"Rapor oluşturma hatası ({report_type}): {e}")
+            flash(f"Rapor oluşturulurken bir hata oluştu: {e}", "error")
+            return redirect(url_for('reports'))
+
+    # GET isteği için rapor seçim sayfasını göster
+    return render_template('reports.html', page_title="Rapor Oluştur")
+
+def generate_module_report_pdf(report_type):
+    """Seçilen modül için verileri çeker ve PDF oluşturur."""
+    buffer = io.BytesIO()
+    # Güvenli dosya adı oluşturma
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    clean_report_type = re.sub(r'\W+', '_', report_type.lower()) # Özel karakterleri _ ile değiştir
+    filename = f"{clean_report_type}_raporu_{timestamp}.pdf"
+
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1*inch, bottomMargin=1*inch, leftMargin=0.75*inch, rightMargin=0.75*inch)
+    styles = getSampleStyleSheet()
+
+    # Türkçe karakterler için stil ayarı (varsa özel fontu kullan)
+    try:
+        # Başlık ve normal metin için stilleri tanımla (Roboto veya Helvetica)
+        title_style = ParagraphStyle(name='TitleStyle', parent=styles['h1'], fontName=FONT_NAME, alignment=TA_CENTER, spaceAfter=20)
+        normal_style = ParagraphStyle(name='NormalStyle', parent=styles['Normal'], fontName=FONT_NAME, alignment=TA_LEFT, spaceAfter=6)
+        table_header_style = ParagraphStyle(name='TableHeader', parent=styles['Normal'], fontName=FONT_NAME, alignment=TA_CENTER, spaceAfter=6, fontSize=10, leading=12)
+        table_cell_style = ParagraphStyle(name='TableCell', parent=styles['Normal'], fontName=FONT_NAME, alignment=TA_LEFT, spaceAfter=6, fontSize=9, leading=11)
+        table_cell_center_style = ParagraphStyle(name='TableCellCenter', parent=table_cell_style, alignment=TA_CENTER)
+        table_cell_currency_style = ParagraphStyle(name='TableCellCurrency', parent=table_cell_style, alignment=TA_LEFT) # Sağa yaslı daha iyi olabilir ama şimdilik sol
+    except Exception as e:
+        print(f"PDF stil oluşturma hatası (font: {FONT_NAME}): {e}")
+        # Hata durumunda varsayılan stilleri kullan
+        title_style = styles['h1']
+        title_style.alignment = TA_CENTER
+        title_style.spaceAfter = 20
+        normal_style = styles['Normal']
+        table_header_style = styles['Normal'] # Basit stil
+        table_cell_style = styles['Normal']
+        table_cell_center_style = styles['Normal']
+        table_cell_currency_style = styles['Normal']
+
+
+    story = []
+    report_title_text = f"{report_type.replace('_', ' ').title()} Raporu"
+    story.append(Paragraph(report_title_text, title_style))
+    story.append(Paragraph(f"Oluşturma Tarihi: {format_datetime(datetime.now())}", normal_style))
+    story.append(Spacer(1, 0.2*inch))
+
+    db = get_db()
+    cursor = db.cursor()
+    data = []
+    headers = []
+
+    # Veritabanından ilgili verileri çek
+    try:
+        if report_type == 'properties':
+            headers = ["ID", "Başlık", "Tip", "Durum", "Fiyat", "Şehir", "İlçe", "Oda", "Sahip"]
+            cursor.execute("""
+                SELECT p.id, p.title, p.property_type, p.status, p.price, p.city, p.district, p.rooms, o.name
+                FROM properties p LEFT JOIN owners o ON p.owner_id = o.id ORDER BY p.id
+            """)
+            data = cursor.fetchall()
+            # Fiyatı formatla
+            formatted_data = []
+            for row in data:
+                row_list = list(row)
+                row_list[4] = format_currency(row_list[4]) # Fiyat sütunu (index 4)
+                formatted_data.append(row_list)
+            data = formatted_data
+
+        elif report_type == 'customers':
+            headers = ["ID", "Ad Soyad", "Telefon", "E-posta", "Tip", "Notlar", "Kayıt Tarihi", "Arşiv"]
+            cursor.execute("SELECT id, name, phone, email, customer_type, notes, date_registered, is_archived FROM customers ORDER BY id")
+            data = cursor.fetchall()
+            # Tarih ve Arşiv durumunu formatla
+            formatted_data = []
+            for row in data:
+                row_list = list(row)
+                row_list[6] = format_datetime(row_list[6]) # Kayıt Tarihi (index 6)
+                row_list[7] = "Evet" if row_list[7] == 1 else "Hayır" # Arşiv (index 7)
+                formatted_data.append(row_list)
+            data = formatted_data
+
+        elif report_type == 'owners':
+            headers = ["ID", "Ad Soyad", "Telefon", "E-posta", "Notlar", "Eklenme Tarihi"]
+            cursor.execute("SELECT id, name, phone, email, notes, date_added FROM owners ORDER BY id")
+            data = cursor.fetchall()
+            # Tarihi formatla
+            formatted_data = []
+            for row in data:
+                row_list = list(row)
+                row_list[5] = format_datetime(row_list[5]) # Eklenme Tarihi (index 5)
+                formatted_data.append(row_list)
+            data = formatted_data
+
+        elif report_type == 'personnel':
+            headers = ["ID", "Ad Soyad", "Pozisyon", "Telefon", "E-posta", "İşe Giriş", "Maaş", "Aktif"]
+            cursor.execute("SELECT id, name, position, phone, email, hire_date, salary, is_active FROM personnel ORDER BY id")
+            data = cursor.fetchall()
+            # Tarih, Maaş ve Aktif durumunu formatla
+            formatted_data = []
+            for row in data:
+                row_list = list(row)
+                row_list[5] = format_date(row_list[5]) # İşe Giriş Tarihi (index 5)
+                row_list[6] = format_currency(row_list[6]) # Maaş (index 6)
+                row_list[7] = "Evet" if row_list[7] == 1 else "Hayır" # Aktif (index 7)
+                formatted_data.append(row_list)
+            data = formatted_data
+
+        elif report_type == 'contracts':
+             headers = ["ID", "Tip", "Emlak", "Müşteri", "Sahip", "Personel", "Söz. Tarihi", "Başl. Tarihi", "Bitiş Tarihi", "Bedel"]
+             cursor.execute("""
+                 SELECT c.id, c.contract_type, p.title, cust.name, own.name, pers.name,
+                        c.contract_date, c.start_date, c.end_date, c.price
+                 FROM contracts c
+                 LEFT JOIN properties p ON c.property_id = p.id
+                 LEFT JOIN customers cust ON c.customer_id = cust.id
+                 LEFT JOIN owners own ON c.owner_id = own.id
+                 LEFT JOIN personnel pers ON c.personnel_id = pers.id
+                 ORDER BY c.id
+             """)
+             data = cursor.fetchall()
+             # Tarihleri ve Bedeli formatla
+             formatted_data = []
+             for row in data:
+                 row_list = list(row)
+                 row_list[6] = format_date(row_list[6]) # Sözleşme Tarihi
+                 row_list[7] = format_date(row_list[7]) # Başlangıç Tarihi
+                 row_list[8] = format_date(row_list[8]) # Bitiş Tarihi
+                 row_list[9] = format_currency(row_list[9]) # Bedel
+                 formatted_data.append(row_list)
+             data = formatted_data
+
+        else:
+            raise ValueError("Geçersiz rapor türü.")
+
+    except sqlite3.Error as db_err:
+        print(f"Veritabanı hatası ({report_type}): {db_err}")
+        raise Exception(f"Rapor verileri alınırken veritabanı hatası oluştu: {db_err}")
+    except Exception as e:
+        print(f"Genel hata ({report_type}): {e}")
+        raise Exception(f"Rapor verileri işlenirken hata oluştu: {e}")
+
+
+    if data:
+        # Tablo başlıklarını stillendir
+        styled_headers = [Paragraph(h, table_header_style) for h in headers]
+        # Tablo verilerini stillendir (her hücreyi Paragraph yap)
+        styled_data = []
+        for row in data:
+            styled_row = []
+            for i, cell in enumerate(row):
+                # Hücre içeriğini string'e çevir (None ise boş string)
+                cell_text = str(cell) if cell is not None else ""
+                # Fiyat/Bedel sütunları için özel stil (varsa)
+                if report_type in ['properties', 'personnel', 'contracts'] and headers[i] in ['Fiyat', 'Maaş', 'Bedel']:
+                     styled_row.append(Paragraph(cell_text, table_cell_currency_style))
+                # ID veya Arşiv/Aktif gibi ortalanacak sütunlar
+                elif headers[i] in ['ID', 'Arşiv', 'Aktif']:
+                     styled_row.append(Paragraph(cell_text, table_cell_center_style))
+                else:
+                     styled_row.append(Paragraph(cell_text, table_cell_style))
+            styled_data.append(styled_row)
+
+        # Tabloyu oluştur
+        table_data = [styled_headers] + styled_data
+        # Sütun genişliklerini ayarla (otomatik veya manuel) - Şimdilik otomatik deneyelim
+        col_widths = [doc.width / len(headers)] * len(headers) # Eşit dağıt
+
+        table = Table(table_data, colWidths=col_widths)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), '#CCCCCC'), # Başlık satırı arkaplanı
+            ('TEXTCOLOR', (0, 0), (-1, 0), '#000000'), # Başlık satırı yazı rengi
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'), # Tüm hücreler (Paragraf hizalaması öncelikli)
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            #('FONTNAME', (0, 0), (-1, 0), FONT_NAME + '-Bold'), # Başlık fontu (Paragraf stili öncelikli)
+            #('FONTNAME', (0, 1), (-1, -1), FONT_NAME), # Veri fontu (Paragraf stili öncelikli)
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10), # Başlık alt boşluk
+            ('TOPPADDING', (0, 0), (-1, 0), 6), # Başlık üst boşluk
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6), # Veri alt boşluk
+            ('TOPPADDING', (0, 1), (-1, -1), 4), # Veri üst boşluk
+            ('BACKGROUND', (0, 1), (-1, -1), '#FFFFFF'), # Veri satırları arkaplanı
+            ('GRID', (0, 0), (-1, -1), 1, '#AAAAAA') # Tüm tabloya grid ekle
+        ]))
+        story.append(table)
+    else:
+        story.append(Paragraph("Rapor için veri bulunamadı.", normal_style))
+
+    try:
+        doc.build(story)
+    except Exception as build_error:
+        print(f"PDF oluşturma hatası (doc.build): {build_error}")
+        # Font bulunamazsa veya başka bir reportlab hatası olursa
+        # Daha basit bir hata mesajı ile PDF oluşturmayı dene
+        buffer = io.BytesIO() # Buffer'ı sıfırla
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph(f"{report_type.replace('_', ' ').title()} Raporu", styles['h1']),
+            Paragraph(f"Oluşturma Tarihi: {format_datetime(datetime.now())}", styles['Normal']),
+            Spacer(1, 0.2*inch),
+            Paragraph(f"PDF oluşturulurken bir hata oluştu: {build_error}", styles['Normal']),
+            Paragraph("Lütfen sistem yöneticisi ile iletişime geçin.", styles['Normal'])
+        ]
+        try:
+            doc.build(story)
+        except Exception as fallback_build_error:
+             print(f"Yedek PDF oluşturma hatası: {fallback_build_error}")
+             raise Exception(f"PDF oluşturulamadı: {fallback_build_error}") # Son çare hata fırlat
+
+    buffer.seek(0)
+    return buffer, filename
 # --- Uygulamayı Başlatma ---
 if __name__ == '__main__':
     print("Uygulama başlatılıyor...")
     init_db() # Veritabanını kontrol et/oluştur/güncelle
-    print(f"Debug modu: {app.debug}")
-    # host='0.0.0.0' uygulamanın ağdaki diğer cihazlardan erişilebilir olmasını sağlar.
-    # Sadece kendi makinenizde çalıştıracaksanız '127.0.0.1' veya 'localhost' kullanın.
-    # port=5000 varsayılan Flask portudur, değiştirebilirsiniz.
-    app.run(debug=is_debug_mode, host='0.0.0.0', port=5000)
+
+    # Debug modunu kontrol et (app.py başında tanımlanan değişkene göre)
+    if is_debug_mode:
+        print("!!! UYARI: Uygulama DEBUG modunda başlatılıyor. Üretim ortamı için uygun değildir!")
+        print(f"Debug modu: {is_debug_mode}")
+        # Geliştirme sunucusunu kullan (debug=True ile)
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    else:
+        print("Uygulama ÜRETİM modunda başlatılıyor.")
+        print(f"Debug modu: {is_debug_mode}")
+        # Üretim için Waitress sunucusunu kullan
+        try:
+            from waitress import serve
+            print("Waitress sunucusu kullanılıyor...")
+            # host='0.0.0.0' tüm ağ arayüzlerinden erişime izin verir.
+            # port=5000 varsayılan porttur, deploy ortamına göre değiştirilebilir (örn: ortam değişkeninden alınabilir).
+            serve(app, host='0.0.0.0', port=5000)
+        except ImportError:
+            print("HATA: 'waitress' paketi bulunamadı. Lütfen 'pip install waitress' ile kurun.")
+            print("Flask geliştirme sunucusu başlatılıyor (üretim için önerilmez)...")
+            app.run(host='0.0.0.0', port=5000) # Waitress yoksa fallback olarak geliştirme sunucusu
